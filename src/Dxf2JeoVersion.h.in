@@ -1,0 +1,7 @@
+#pragma once
+
+#include <cstdint>
+
+constexpr std::uint64_t DXF2JEO_VERSION_MAJOR = @dxf2jeo_VERSION_MAJOR@;
+constexpr std::uint64_t DXF2JEO_VERSION_MINOR = @dxf2jeo_VERSION_MINOR@;
+constexpr std::uint64_t DXF2JEO_VERSION_PATCH = @dxf2jeo_VERSION_PATCH@;
