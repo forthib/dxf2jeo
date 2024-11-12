@@ -2,6 +2,7 @@
 
 #include "DxfColors.h"
 #include "DxfModel.h"
+#include "DxfUtils.h"
 #include "JeoModel.h"
 #include <algorithm>
 #include <cmath>
@@ -85,11 +86,7 @@ namespace {
         dxfArc.radius = evaluateArcRadius(jeoModel, jeoArc);
         dxfArc.theta1 = evaluateArcTheta(jeoModel, jeoArc, jeoArc.firstPointIndex);
         dxfArc.theta2 = evaluateArcTheta(jeoModel, jeoArc, jeoArc.lastPointIndex);
-        if (dxfArc.theta1 >= dxfArc.theta2) {
-            std::swap(dxfArc.theta1, dxfArc.theta2);
-            dxfArc.theta2 += 2 * PI;
-        }
-        return dxfArc;
+        return normalize(dxfArc, jeoArc.direct);
     }
 
     DxfPolyline toDxfPolyline(const JeoModel& jeoModel, const JeoPolyline& jeoPolyline)

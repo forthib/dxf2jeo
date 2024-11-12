@@ -4,6 +4,9 @@ jsoncons/0.176.0
 libdxfrw/2.2.0
 fmt/11.0.1
 
+[test_requires]
+gtest/1.15.0
+
 [layout]
 cmake_layout
 

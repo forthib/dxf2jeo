@@ -9,5 +9,6 @@ pip install cmake conan
 conan install . --build=missing
 cmake --preset conan-default
 cmake --build --preset conan-release
+ctest --test-dir build --build-config Release
 cmake --install build --prefix install
 ```
