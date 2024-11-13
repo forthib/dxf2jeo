@@ -1,7 +1,7 @@
 #include "DxfReader.h"
 
+#include "ArcUtils.h"
 #include "DxfModel.h"
-#include "DxfUtils.h"
 #include <cmath>
 #include <fmt/format.h>
 #include <libdxfrw/libdxfrw.h>
@@ -65,7 +65,8 @@ namespace {
         arc.theta2 = data.endangle;
 
         const auto direct = data.extPoint.z > 0.;
-        return normalize(arc, direct);
+        normalize(arc.theta1, arc.theta2, direct);
+        return arc;
     }
 
     DxfPolyline convertPolyline(const DRW_LWPolyline& data)

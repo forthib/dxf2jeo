@@ -1,5 +1,6 @@
 #include "Dxf2Jeo.h"
 
+#include "ArcUtils.h"
 #include "DxfColors.h"
 #include "DxfModel.h"
 #include "JeoModel.h"
@@ -114,13 +115,21 @@ namespace {
         jeoModel.lines.push_back(jeoLine);
     }
 
-    void addArc(JeoModel& jeoModel, DxfArc dxfArc)
+    void addArc(JeoModel& jeoModel, const DxfArc& dxfArc)
     {
-        auto jeoArc            = JeoArc{};
-        jeoArc.centerIndex     = addPoint(jeoModel, dxfArc.center);
-        jeoArc.firstPointIndex = addPoint(jeoModel, evaluate(dxfArc, 0.));
-        jeoArc.lastPointIndex  = addPoint(jeoModel, evaluate(dxfArc, 1.));
-        jeoArc.direct          = dxfArc.theta1 <= dxfArc.theta2;
+        auto jeoArc        = JeoArc{};
+        jeoArc.centerIndex = addPoint(jeoModel, dxfArc.center);
+        if (isNull2PI(dxfArc.theta1 - dxfArc.theta2)) {
+            const auto pointIndex  = addPoint(jeoModel, evaluate(dxfArc, 0.));
+            jeoArc.firstPointIndex = pointIndex;
+            jeoArc.lastPointIndex  = pointIndex;
+            jeoArc.direct          = !isNull(dxfArc.theta1 - dxfArc.theta2);
+        }
+        else {
+            jeoArc.firstPointIndex = addPoint(jeoModel, evaluate(dxfArc, 0.));
+            jeoArc.lastPointIndex  = addPoint(jeoModel, evaluate(dxfArc, 1.));
+            jeoArc.direct          = dxfArc.theta1 <= dxfArc.theta2;
+        }
         setEntity(jeoModel, jeoArc, dxfArc);
         jeoModel.arcs.push_back(jeoArc);
     }

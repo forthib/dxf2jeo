@@ -1,8 +1,8 @@
 #include "Jeo2Dxf.h"
 
+#include "ArcUtils.h"
 #include "DxfColors.h"
 #include "DxfModel.h"
-#include "DxfUtils.h"
 #include "JeoModel.h"
 #include <algorithm>
 #include <cmath>
@@ -84,9 +84,16 @@ namespace {
         auto dxfArc   = toDxfEntity<DxfArc>(jeoModel, jeoArc);
         dxfArc.center = toDxfCoord(jeoModel, jeoArc.centerIndex);
         dxfArc.radius = evaluateArcRadius(jeoModel, jeoArc);
-        dxfArc.theta1 = evaluateArcTheta(jeoModel, jeoArc, jeoArc.firstPointIndex);
-        dxfArc.theta2 = evaluateArcTheta(jeoModel, jeoArc, jeoArc.lastPointIndex);
-        return normalize(dxfArc, jeoArc.direct);
+        if (jeoArc.firstPointIndex == jeoArc.lastPointIndex) {
+            dxfArc.theta1 = evaluateArcTheta(jeoModel, jeoArc, jeoArc.firstPointIndex);
+            dxfArc.theta2 = jeoArc.direct ? dxfArc.theta1 + 2 * PI : dxfArc.theta1;
+        }
+        else {
+            dxfArc.theta1 = evaluateArcTheta(jeoModel, jeoArc, jeoArc.firstPointIndex);
+            dxfArc.theta2 = evaluateArcTheta(jeoModel, jeoArc, jeoArc.lastPointIndex);
+            normalize(dxfArc.theta1, dxfArc.theta2, jeoArc.direct);
+        }
+        return dxfArc;
     }
 
     DxfPolyline toDxfPolyline(const JeoModel& jeoModel, const JeoPolyline& jeoPolyline)

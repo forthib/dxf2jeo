@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(dxf2jeo VERSION 1.0.1 LANGUAGES CXX C)
+project(dxf2jeo VERSION 1.0.2 LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -18,21 +18,21 @@ configure_file(src/Dxf2JeoVersion.h.in Dxf2JeoVersion.h)
 add_library(libdxf2jeo STATIC)
 target_sources(libdxf2jeo
     PUBLIC
+        src/ArcUtils.h
         src/Dxf2Jeo.h
         src/DxfColors.h
         src/DxfModel.h
         src/DxfReader.h
-        src/DxfUtils.h
         src/DxfWriter.h
         src/Jeo2Dxf.h
         src/JeoModel.h
         src/JeoReader.h
         src/JeoWriter.h
     PRIVATE
+        src/ArcUtils.cpp
         src/Dxf2Jeo.cpp
         src/DxfColors.cpp
         src/DxfReader.cpp
-        src/DxfUtils.cpp
         src/DxfWriter.cpp
         src/Jeo2Dxf.cpp
         src/JeoReader.cpp
