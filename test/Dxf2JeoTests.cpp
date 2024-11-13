@@ -33,4 +33,14 @@ namespace {
         ASSERT_NEAR(dxfModel.arcs[0].theta1, 1.0808390005411683, 1e-12);
         ASSERT_NEAR(dxfModel.arcs[0].theta2, 2.0607536530486250, 1e-12);
     }
+
+    TEST(dxf2jeotests, test3)
+    {
+        const auto inputPath = getAssetDir() / "test3.dxf";
+        const auto dxfModel = readDxf(inputPath);
+
+        ASSERT_EQ(dxfModel.lines.size(), 1);
+        ASSERT_TRUE(dxfModel.lines[0].peURL.has_value());
+        ASSERT_EQ(dxfModel.lines[0].peURL.value(), "hello");
+    }
 }

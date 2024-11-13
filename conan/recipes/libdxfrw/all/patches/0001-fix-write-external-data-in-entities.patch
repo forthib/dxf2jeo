@@ -1,0 +1,165 @@
+From 39159bcc0063f81d7ba029adb4031f236be352ca Mon Sep 17 00:00:00 2001
+From: forthib <forthib@users.noreply.github.com>
+Date: Mon, 8 Jul 2024 10:10:34 +0200
+Subject: [PATCH] fix: write external data in entities
+
+---
+ src/drw_objects.cpp | 12 ++++++------
+ src/drw_objects.h   | 20 +++++++-------------
+ src/libdxfrw.cpp    |  7 +++++--
+ src/libdxfrw.h      |  2 +-
+ 4 files changed, 19 insertions(+), 22 deletions(-)
+
+diff --git a/src/drw_objects.cpp b/src/drw_objects.cpp
+index 80703ed..9fbfaa8 100644
+--- a/src/drw_objects.cpp
++++ b/src/drw_objects.cpp
+@@ -46,7 +46,7 @@ bool DRW_TableEntry::parseCode(int code, dxfReader *reader){
+     case 1003:
+     case 1004:
+     case 1005:
+-        extData.push_back(new DRW_Variant(code, reader->getString()));
++        extData.push_back(std::make_shared<DRW_Variant>(code, reader->getString()));
+         break;
+     case 1010:
+     case 1011:
+@@ -57,7 +57,7 @@ bool DRW_TableEntry::parseCode(int code, dxfReader *reader){
+             curr->setCoordX( reader->getDouble());
+         }
+         else {
+-            curr = new DRW_Variant( code, DRW_Coord( reader->getDouble(), 0.0, 0.0));
++            curr = std::make_shared<DRW_Variant>( code, DRW_Coord( reader->getDouble(), 0.0, 0.0));
+             extData.push_back(curr);
+         }
+         break;
+@@ -70,7 +70,7 @@ bool DRW_TableEntry::parseCode(int code, dxfReader *reader){
+             curr->setCoordY( reader->getDouble());
+         }
+         else {
+-            curr = new DRW_Variant( code, DRW_Coord( 0.0, reader->getDouble(), 0.0));
++            curr = std::make_shared<DRW_Variant>( code, DRW_Coord( 0.0, reader->getDouble(), 0.0));
+             extData.push_back(curr);
+         }
+         break;
+@@ -83,18 +83,18 @@ bool DRW_TableEntry::parseCode(int code, dxfReader *reader){
+             curr->setCoordZ( reader->getDouble());
+         }
+         else {
+-            curr = new DRW_Variant( code, DRW_Coord( 0.0, 0.0, reader->getDouble()));
++            curr = std::make_shared<DRW_Variant>( code, DRW_Coord( 0.0, 0.0, reader->getDouble()));
+             extData.push_back(curr);
+         }
+         break;
+     case 1040:
+     case 1041:
+     case 1042:
+-        extData.push_back(new DRW_Variant(code, reader->getDouble()));
++        extData.push_back(std::make_shared<DRW_Variant>(code, reader->getDouble()));
+         break;
+     case 1070:
+     case 1071:
+-        extData.push_back(new DRW_Variant(code, reader->getInt32() ));
++        extData.push_back(std::make_shared<DRW_Variant>(code, reader->getInt32() ));
+         break;
+     default:
+         break;
+diff --git a/src/drw_objects.h b/src/drw_objects.h
+index 8960d45..bfa44a3 100644
+--- a/src/drw_objects.h
++++ b/src/drw_objects.h
+@@ -61,10 +61,6 @@ public:
+     DRW_TableEntry() {}
+ 
+     virtual~DRW_TableEntry() {
+-        for (std::vector<DRW_Variant*>::iterator it = extData.begin(); it != extData.end(); ++it) {
+-            delete *it;
+-        }
+-
+         extData.clear();
+     }
+ 
+@@ -78,10 +74,11 @@ public:
+         numReactors {e.numReactors},
+         curr {nullptr}
+     {
+-        for (std::vector<DRW_Variant *>::const_iterator it = e.extData.begin(); it != e.extData.end(); ++it) {
+-            DRW_Variant *src = *it;
+-            DRW_Variant *dst = new DRW_Variant( *src);
+-            extData.push_back( dst);
++        for (const auto& var : e.extData)
++        {
++            std::shared_ptr<DRW_Variant> src(var);
++            std::shared_ptr<DRW_Variant> dst(new DRW_Variant(*src));
++            extData.push_back(dst);
+             if (src == e.curr) {
+                 curr = dst;
+             }
+@@ -94,9 +91,6 @@ protected:
+     bool parseDwg(DRW::Version version, dwgBuffer *buf, dwgBuffer* strBuf, duint32 bs=0);
+     void reset() {
+         flags = 0;
+-        for (std::vector<DRW_Variant*>::iterator it = extData.begin(); it != extData.end(); ++it) {
+-            delete *it;
+-        }
+         extData.clear();
+         curr = nullptr;
+     }
+@@ -107,7 +101,7 @@ public:
+     int             parentHandle {0};       /*!< Soft-pointer ID/handle to owner object, code 330 */
+     UTF8STRING      name;                   /*!< entry name, code 2 */
+     int             flags {0};              /*!< Flags relevant to entry, code 70 */
+-    std::vector<DRW_Variant*> extData;      /*!< FIFO list of extended data, codes 1000 to 1071*/
++    std::vector<std::shared_ptr<DRW_Variant>> extData;      /*!< FIFO list of extended data, codes 1000 to 1071*/
+ 
+     //***** dwg parse ********/
+ protected:
+@@ -117,7 +111,7 @@ protected:
+     duint32 objSize {0};    //RL 32bits object data size in bits
+ 
+ private:
+-    DRW_Variant* curr {nullptr};
++    std::shared_ptr<DRW_Variant> curr {nullptr};
+ };
+ 
+ 
+diff --git a/src/libdxfrw.cpp b/src/libdxfrw.cpp
+index b51f04e..b607844 100644
+--- a/src/libdxfrw.cpp
++++ b/src/libdxfrw.cpp
+@@ -189,6 +189,9 @@ bool dxfRW::writeEntity(DRW_Entity *ent) {
+     if (version >= DRW::AC1014) {
+         writeAppData(ent->appData);
+     }
++	if (!ent->extData.empty()) {
++		writeExtData(ent->extData);
++	}
+     return true;
+ }
+ 
+@@ -1818,8 +1821,8 @@ bool dxfRW::writeObjects() {
+     return true;
+ }
+ 
+-bool dxfRW::writeExtData(const std::vector<DRW_Variant*> &ed){
+-    for (std::vector<DRW_Variant*>::const_iterator it=ed.begin(); it!=ed.end(); ++it){
++bool dxfRW::writeExtData(const std::vector<std::shared_ptr<DRW_Variant>> &ed){
++    for (std::vector< std::shared_ptr<DRW_Variant>>::const_iterator it=ed.begin(); it!=ed.end(); ++it){
+         switch ((*it)->code()) {
+         case 1000:
+         case 1001:
+diff --git a/src/libdxfrw.h b/src/libdxfrw.h
+index 7deee2f..a9177bd 100644
+--- a/src/libdxfrw.h
++++ b/src/libdxfrw.h
+@@ -124,7 +124,7 @@ private:
+     bool writeTables();
+     bool writeBlocks();
+     bool writeObjects();
+-    bool writeExtData(const std::vector<DRW_Variant*> &ed);
++    bool writeExtData(const std::vector<std::shared_ptr<DRW_Variant>> &ed);
+     /*use version from dwgutil.h*/
+     std::string toHexStr(int n);//RLZ removeme
+     bool writeAppData(const std::list<std::list<DRW_Variant>> &appData);
+-- 
+2.41.0.windows.3
+

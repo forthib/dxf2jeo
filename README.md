@@ -6,9 +6,10 @@ Converts a 2D .dxf file into Geometric Json .jeo file
 python -m venv .venv
 .venv\Scripts\activate.bat
 pip install cmake conan
-conan install . --build=missing
+conan create conan/recipes/libdxfrw/all/conanfile.py --version 2.2.0 --user dxf2jeo --channel stable --settings build_type=Release
+conan install . --build=missing --settings build_type=Release
 cmake --preset conan-default
 cmake --build --preset conan-release
-ctest --test-dir build --build-config Release
+ctest --preset conan-release
 cmake --install build --prefix install
 ```
