@@ -143,7 +143,6 @@ namespace {
         jeoPolyline.pointIndexes = addPoints(jeoModel, dxfPolyline.coords);
         if (dxfPolyline.closed)
             jeoPolyline.pointIndexes.push_back(jeoPolyline.pointIndexes.front());
-        jeoModel.polylines.push_back(jeoPolyline);
         setEntity(jeoModel, jeoPolyline, dxfPolyline);
         jeoModel.polylines.push_back(jeoPolyline);
     }
