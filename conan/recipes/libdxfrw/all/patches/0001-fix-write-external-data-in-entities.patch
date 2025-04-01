@@ -1,14 +1,14 @@
-From 39159bcc0063f81d7ba029adb4031f236be352ca Mon Sep 17 00:00:00 2001
-From: forthib <forthib@users.noreply.github.com>
-Date: Mon, 8 Jul 2024 10:10:34 +0200
-Subject: [PATCH] fix: write external data in entities
+From 465786d63ee36745995687b309bcb1248bceb39c Mon Sep 17 00:00:00 2001
+From: VIARON <Luc.VIARON@cea.fr>
+Date: Wed, 2 Apr 2025 11:00:37 +0200
+Subject: [PATCH] Added external data writing in entities
 
 ---
- src/drw_objects.cpp | 12 ++++++------
- src/drw_objects.h   | 20 +++++++-------------
- src/libdxfrw.cpp    |  7 +++++--
+ src/drw_objects.cpp | 12 ++++----
+ src/drw_objects.h   | 20 +++++---------
+ src/libdxfrw.cpp    | 67 +++++++++++++++++++++++++++++++++++++++++++--
  src/libdxfrw.h      |  2 +-
- 4 files changed, 19 insertions(+), 22 deletions(-)
+ 4 files changed, 79 insertions(+), 22 deletions(-)
 
 diff --git a/src/drw_objects.cpp b/src/drw_objects.cpp
 index 80703ed..9fbfaa8 100644
@@ -64,7 +64,7 @@ index 80703ed..9fbfaa8 100644
      default:
          break;
 diff --git a/src/drw_objects.h b/src/drw_objects.h
-index 8960d45..bfa44a3 100644
+index 8960d45..7ca563d 100644
 --- a/src/drw_objects.h
 +++ b/src/drw_objects.h
 @@ -61,10 +61,6 @@ public:
@@ -89,7 +89,7 @@ index 8960d45..bfa44a3 100644
 +        for (const auto& var : e.extData)
 +        {
 +            std::shared_ptr<DRW_Variant> src(var);
-+            std::shared_ptr<DRW_Variant> dst(new DRW_Variant(*src));
++            std::shared_ptr<DRW_Variant> dst(src);
 +            extData.push_back(dst);
              if (src == e.curr) {
                  curr = dst;
@@ -123,20 +123,220 @@ index 8960d45..bfa44a3 100644
  
  
 diff --git a/src/libdxfrw.cpp b/src/libdxfrw.cpp
-index b51f04e..b607844 100644
+index b51f04e..97d425f 100644
 --- a/src/libdxfrw.cpp
 +++ b/src/libdxfrw.cpp
-@@ -189,6 +189,9 @@ bool dxfRW::writeEntity(DRW_Entity *ent) {
-     if (version >= DRW::AC1014) {
-         writeAppData(ent->appData);
+@@ -584,6 +584,9 @@ bool dxfRW::writePoint(DRW_Point *ent) {
+     if (ent->basePoint.z != 0.0) {
+         writer->writeDouble(30, ent->basePoint.z);
      }
-+	if (!ent->extData.empty()) {
-+		writeExtData(ent->extData);
-+	}
++    if (!ent->extData.empty()) {
++        writeExtData(ent->extData);
++    }
      return true;
  }
  
-@@ -1818,8 +1821,8 @@ bool dxfRW::writeObjects() {
+@@ -604,6 +607,9 @@ bool dxfRW::writeLine(DRW_Line *ent) {
+         writer->writeDouble(11, ent->secPoint.x);
+         writer->writeDouble(21, ent->secPoint.y);
+     }
++    if (!ent->extData.empty()) {
++        writeExtData(ent->extData);
++    }
+     return true;
+ }
+ 
+@@ -626,6 +632,9 @@ bool dxfRW::writeRay(DRW_Ray *ent) {
+         writer->writeDouble(11, crd.x);
+         writer->writeDouble(21, crd.y);
+     }
++    if (!ent->extData.empty()) {
++        writeExtData(ent->extData);
++    }
+     return true;
+ }
+ 
+@@ -648,6 +657,9 @@ bool dxfRW::writeXline(DRW_Xline *ent) {
+         writer->writeDouble(11, crd.x);
+         writer->writeDouble(21, crd.y);
+     }
++    if (!ent->extData.empty()) {
++        writeExtData(ent->extData);
++    }
+     return true;
+ }
+ 
+@@ -663,6 +675,9 @@ bool dxfRW::writeCircle(DRW_Circle *ent) {
+         writer->writeDouble(30, ent->basePoint.z);
+     }
+     writer->writeDouble(40, ent->radious);
++    if (!ent->extData.empty()) {
++        writeExtData(ent->extData);
++    }
+     return true;
+ }
+ 
+@@ -683,6 +698,9 @@ bool dxfRW::writeArc(DRW_Arc *ent) {
+     }
+     writer->writeDouble(50, ent->staangle*ARAD);
+     writer->writeDouble(51, ent->endangle*ARAD);
++    if (!ent->extData.empty()) {
++        writeExtData(ent->extData);
++    }
+     return true;
+ }
+ 
+@@ -704,6 +722,9 @@ bool dxfRW::writeEllipse(DRW_Ellipse *ent){
+         writer->writeDouble(40, ent->ratio);
+         writer->writeDouble(41, ent->staparam);
+         writer->writeDouble(42, ent->endparam);
++        if (!ent->extData.empty()) {
++            writeExtData(ent->extData);
++        }
+     } else {
+         DRW_Polyline pol;
+         //RLZ: copy properties
+@@ -731,6 +752,9 @@ bool dxfRW::writeTrace(DRW_Trace *ent){
+     writer->writeDouble(13, ent->fourPoint.x);
+     writer->writeDouble(23, ent->fourPoint.y);
+     writer->writeDouble(33, ent->fourPoint.z);
++    if (!ent->extData.empty()) {
++        writeExtData(ent->extData);
++    }
+     return true;
+ }
+ 
+@@ -752,6 +776,9 @@ bool dxfRW::writeSolid(DRW_Solid *ent){
+     writer->writeDouble(13, ent->fourPoint.x);
+     writer->writeDouble(23, ent->fourPoint.y);
+     writer->writeDouble(33, ent->fourPoint.z);
++    if (!ent->extData.empty()) {
++        writeExtData(ent->extData);
++    }
+     return true;
+ }
+ 
+@@ -774,6 +801,9 @@ bool dxfRW::write3dface(DRW_3Dface *ent){
+     writer->writeDouble(23, ent->fourPoint.y);
+     writer->writeDouble(33, ent->fourPoint.z);
+     writer->writeInt16(70, ent->invisibleflag);
++    if (!ent->extData.empty()) {
++        writeExtData(ent->extData);
++    }
+     return true;
+ }
+ 
+@@ -806,6 +836,9 @@ bool dxfRW::writeLWPolyline(DRW_LWPolyline *ent){
+     } else {
+         //RLZ: TODO convert lwpolyline in polyline (not exist in acad 12)
+     }
++    if (!ent->extData.empty()) {
++        writeExtData(ent->extData);
++    }
+     return true;
+ }
+ 
+@@ -900,6 +933,9 @@ bool dxfRW::writePolyline(DRW_Polyline *ent) {
+     }
+     writer->writeString(0, "SEQEND");
+     writeEntity(ent);
++    if (!ent->extData.empty()) {
++        writeExtData(ent->extData);
++    }
+     return true;
+ }
+ 
+@@ -936,6 +972,9 @@ bool dxfRW::writeSpline(DRW_Spline *ent){
+     } else {
+         //RLZ: TODO convert spline in polyline (not exist in acad 12)
+     }
++    if (!ent->extData.empty()) {
++        writeExtData(ent->extData);
++    }
+     return true;
+ }
+ 
+@@ -1024,6 +1063,9 @@ bool dxfRW::writeHatch(DRW_Hatch *ent){
+     } else {
+         //RLZ: TODO verify in acad12
+     }
++    if (!ent->extData.empty()) {
++        writeExtData(ent->extData);
++    }
+     return true;
+ }
+ 
+@@ -1051,6 +1093,9 @@ bool dxfRW::writeLeader(DRW_Leader *ent){
+     } else  {
+         //RLZ: todo not supported by acad 12 saved as unnamed block
+     }
++    if (!ent->extData.empty()) {
++        writeExtData(ent->extData);
++    }
+     return true;
+ }
+ bool dxfRW::writeDimension(DRW_Dimension *ent) {
+@@ -1170,6 +1215,9 @@ bool dxfRW::writeDimension(DRW_Dimension *ent) {
+     } else  {
+         //RLZ: todo not supported by acad 12 saved as unnamed block
+     }
++    if (!ent->extData.empty()) {
++        writeExtData(ent->extData);
++    }
+     return true;
+ }
+ 
+@@ -1192,6 +1240,9 @@ bool dxfRW::writeInsert(DRW_Insert *ent){
+     writer->writeInt16(71, ent->rowcount);
+     writer->writeDouble(44, ent->colspace);
+     writer->writeDouble(45, ent->rowspace);
++    if (!ent->extData.empty()) {
++        writeExtData(ent->extData);
++    }
+     return true;
+ }
+ 
+@@ -1232,6 +1283,9 @@ bool dxfRW::writeText(DRW_Text *ent){
+     if (ent->alignV != DRW_Text::VBaseLine) {
+         writer->writeInt16(73, ent->alignV);
+     }
++    if (!ent->extData.empty()) {
++        writeExtData(ent->extData);
++    }
+     return true;
+ }
+ 
+@@ -1266,6 +1320,9 @@ bool dxfRW::writeMText(DRW_MText *ent){
+     } else {
+         //RLZ: TODO convert mtext in text lines (not exist in acad 12)
+     }
++    if (!ent->extData.empty()) {
++        writeExtData(ent->extData);
++    }
+     return true;
+ }
+ 
+@@ -1285,6 +1342,9 @@ bool dxfRW::writeViewport(DRW_Viewport *ent) {
+     writer->writeInt16(69, ent->vpID);
+     writer->writeDouble(12, ent->centerPX);//RLZ: verify if exist in V12
+     writer->writeDouble(22, ent->centerPY);//RLZ: verify if exist in V12
++    if (!ent->extData.empty()) {
++        writeExtData(ent->extData);
++    }
+     return true;
+ }
+ 
+@@ -1329,6 +1389,9 @@ DRW_ImageDef* dxfRW::writeImage(DRW_Image *ent, std::string name){
+         writer->writeInt16(283, ent->fade);
+         writer->writeString(360, idReactor);
+         id->reactors[idReactor] = toHexStr(ent->handle);
++        if (!ent->extData.empty()) {
++            writeExtData(ent->extData);
++        }
+         return id;
+     }
+     return NULL; //not exist in acad 12
+@@ -1818,8 +1881,8 @@ bool dxfRW::writeObjects() {
      return true;
  }
  
@@ -161,5 +361,5 @@ index 7deee2f..a9177bd 100644
      std::string toHexStr(int n);//RLZ removeme
      bool writeAppData(const std::list<std::list<DRW_Variant>> &appData);
 -- 
-2.41.0.windows.3
+2.45.1.windows.1
 
