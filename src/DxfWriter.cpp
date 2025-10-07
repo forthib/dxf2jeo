@@ -148,7 +148,13 @@ namespace {
         void writeVports() override {}
         void writeDimstyles() override {}
         void writeObjects() override {}
-        void writeAppId() override {}
+
+        void writeAppId() override
+        {
+            auto data = DRW_AppId{};
+            data.name = "PE_URL";
+            dxfrw_->writeAppId(&data);
+        }
 
       private:
         const DxfModel* model_;

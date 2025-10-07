@@ -8,3 +8,5 @@ sources:
 patches:
   2.2.0:
     - patch_file: "patches/0001-fix-write-external-data-in-entities.patch"
+    - patch_file: "patches/0002-fix-gcc-compilation.patch"
+    - patch_file: "patches/0003-fix-write-external-data-at-the-end-of-entity.patch"

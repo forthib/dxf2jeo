@@ -1,0 +1,24 @@
+From be3e602f3ced164a72bdd4407b113bbd983549a9 Mon Sep 17 00:00:00 2001
+From: forthib <forthib@users.noreply.github.com>
+Date: Tue, 7 Oct 2025 13:20:01 +0200
+Subject: [PATCH 2/3] fix: gcc compilation
+
+---
+ src/drw_objects.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/drw_objects.h b/src/drw_objects.h
+index bfa44a3..ab887b2 100644
+--- a/src/drw_objects.h
++++ b/src/drw_objects.h
+@@ -18,6 +18,7 @@
+ #include <string>
+ #include <vector>
+ #include <map>
++#include <memory>
+ #include "drw_base.h"
+ 
+ class dxfReader;
+-- 
+2.46.0.windows.1
+
