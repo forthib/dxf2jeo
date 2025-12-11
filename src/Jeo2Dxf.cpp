@@ -103,7 +103,8 @@ namespace {
 
         auto dxfPolyline   = toDxfEntity<DxfPolyline>(jeoModel, jeoPolyline);
         dxfPolyline.coords = toDxfCoords(jeoModel, jeoPolyline.pointIndexes);
-        dxfPolyline.closed = jeoPolyline.pointIndexes.front() == jeoPolyline.pointIndexes.back();
+        dxfPolyline.bulges = jeoPolyline.bulges;
+        dxfPolyline.closed = jeoPolyline.closed;
         return dxfPolyline;
     }
 }

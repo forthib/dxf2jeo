@@ -20,7 +20,8 @@ struct JeoPoint
     double z = 0.;
 };
 
-struct JeoEntity {
+struct JeoEntity
+{
     std::optional<uint64_t> colorIndex;
     std::optional<uint64_t> tagIndex;
 };
@@ -41,7 +42,9 @@ struct JeoArc : JeoEntity
 
 struct JeoPolyline : JeoEntity
 {
-    std::vector<std::uint64_t> pointIndexes;
+    std::vector<std::uint64_t>         pointIndexes;
+    std::optional<std::vector<double>> bulges;
+    bool                               closed = false;
 };
 
 struct JeoModel

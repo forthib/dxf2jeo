@@ -7,58 +7,51 @@
 #include <jsoncons/json.hpp>
 
 namespace {
-    auto toArray(const JeoColor& color) { return std::array{color.r, color.g, color.b}; }
-    auto toArray(const JeoPoint& point) { return std::array{point.x, point.y, point.z}; }
+    auto toJson(const JeoColor& color) { return std::array{color.r, color.g, color.b}; }
+    auto toJson(const JeoPoint& point) { return std::array{point.x, point.y, point.z}; }
 
-    auto toArray(const JeoLine& line)
+    auto toJson(const JeoEntity& entity)
     {
-        auto values = std::array<std::int64_t, 4>{};
-        values[0]   = static_cast<std::int64_t>(line.firstPointIndex);
-        values[1]   = static_cast<std::int64_t>(line.lastPointIndex);
-        values[2]   = static_cast<std::int64_t>(line.colorIndex.value_or(-1));
-        values[3]   = static_cast<std::int64_t>(line.tagIndex.value_or(-1));
-        return values;
+        auto json = jsoncons::ojson{};
+        if (entity.colorIndex)
+            json.insert_or_assign("color", entity.colorIndex.value());
+        if (entity.tagIndex)
+            json.insert_or_assign("tag", entity.tagIndex.value());
+        return json;
     }
 
-    auto toArray(const JeoArc& arc)
+    auto toJson(const JeoLine& line)
     {
-        auto values = std::array<std::int64_t, 6>{};
-        values[0]   = static_cast<std::int64_t>(arc.centerIndex);
-        values[1]   = static_cast<std::int64_t>(arc.firstPointIndex);
-        values[2]   = static_cast<std::int64_t>(arc.lastPointIndex);
-        values[3]   = static_cast<std::int64_t>(arc.direct ? 1 : 0);
-        values[4]   = static_cast<std::int64_t>(arc.colorIndex.value_or(-1));
-        values[5]   = static_cast<std::int64_t>(arc.tagIndex.value_or(-1));
-        return values;
+        auto json = toJson(static_cast<const JeoEntity&>(line));
+        json.insert_or_assign("points", std::array{line.firstPointIndex, line.lastPointIndex});
+        return json;
     }
 
-    auto toVector(const JeoPolyline& polyline)
+    auto toJson(const JeoArc& arc)
     {
-        auto values = std::vector<std::int64_t>{};
-        values.reserve(polyline.pointIndexes.size() + 2);
-        for (const auto pointIndex : polyline.pointIndexes)
-            values.push_back(static_cast<std::int64_t>(pointIndex));
-        values.push_back(static_cast<std::int64_t>(polyline.colorIndex.value_or(-1)));
-        values.push_back(static_cast<std::int64_t>(polyline.tagIndex.value_or(-1)));
-        return values;
+        auto json = toJson(static_cast<const JeoEntity&>(arc));
+        json.insert_or_assign("points", std::array{arc.centerIndex, arc.firstPointIndex, arc.lastPointIndex});
+        json.insert_or_assign("direct", arc.direct);
+        return json;
     }
 
-    template<typename T> auto toArrays(const std::vector<T>& values)
+    auto toJson(const JeoPolyline& polyline)
     {
-        using ValueArray = std::remove_cv_t<std::remove_reference_t<decltype(toArray(values.front()))>>;
-
-        auto valueArrays = std::vector<ValueArray>(values.size());
-        std::transform(values.begin(), values.end(), valueArrays.begin(), [](const auto& value) { return toArray(value); });
-        return valueArrays;
+        auto json = toJson(static_cast<const JeoEntity&>(polyline));
+        json.insert_or_assign("points", polyline.pointIndexes);
+        if (polyline.bulges)
+            json.insert_or_assign("bulges", polyline.bulges.value());
+        json.insert_or_assign("closed", polyline.closed);
+        return json;
     }
 
-    template<typename T> auto toVectors(const std::vector<T>& values)
+    template<typename T> auto toJson(const std::vector<T>& elements)
     {
-        using ValueVector = std::remove_cv_t<std::remove_reference_t<decltype(toVector(values.front()))>>;
-
-        auto valueVectors = std::vector<ValueVector>(values.size());
-        std::transform(values.begin(), values.end(), valueVectors.begin(), [](const auto& value) { return toVector(value); });
-        return valueVectors;
+        auto json = jsoncons::ojson::make_array();
+        json.reserve(elements.size());
+        for (const auto& element : elements)
+            json.push_back(toJson(element));
+        return json;
     }
 }
 
@@ -69,17 +62,17 @@ void writeJeo(const JeoModel& model, const std::filesystem::path& filePath)
         throw std::runtime_error{fmt::format("unable to write file {}", filePath.string())};
 
     auto jsonVersion = jsoncons::ojson{};
-    jsonVersion.insert_or_assign("major", 1);
+    jsonVersion.insert_or_assign("major", 2);
     jsonVersion.insert_or_assign("minor", 0);
 
     auto json = jsoncons::ojson{};
     json.insert_or_assign("version", jsonVersion);
-    json.insert_or_assign("colors", toArrays(model.colors));
+    json.insert_or_assign("colors", toJson(model.colors));
     json.insert_or_assign("tags", model.tags);
-    json.insert_or_assign("points", toArrays(model.points));
-    json.insert_or_assign("lines", toArrays(model.lines));
-    json.insert_or_assign("arcs", toArrays(model.arcs));
-    json.insert_or_assign("polylines", toVectors(model.polylines));
+    json.insert_or_assign("points", toJson(model.points));
+    json.insert_or_assign("lines", toJson(model.lines));
+    json.insert_or_assign("arcs", toJson(model.arcs));
+    json.insert_or_assign("polylines", toJson(model.polylines));
 
     auto jsonOptions = jsoncons::json_options{};
     jsonOptions.precision(20);

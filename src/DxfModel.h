@@ -41,8 +41,9 @@ struct DxfArc : DxfEntity
 
 struct DxfPolyline : DxfEntity
 {
-    std::vector<DxfCoord> coords;
-    bool                  closed = false;
+    std::vector<DxfCoord>              coords;
+    std::optional<std::vector<double>> bulges;
+    bool                               closed = false;
 };
 
 struct DxfModel

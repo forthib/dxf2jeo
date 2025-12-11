@@ -72,14 +72,19 @@ namespace {
     DxfPolyline convertPolyline(const DRW_LWPolyline& data)
     {
         auto polyline = DxfPolyline{convertEntity(data)};
+        auto bulges   = std::vector<double>{};
         for (auto i = 0; i < data.vertexnum; ++i) {
             auto coord = DxfCoord{};
             coord.x    = data.vertlist[i]->x;
             coord.y    = data.vertlist[i]->y;
             coord.z    = data.elevation;
             polyline.coords.push_back(coord);
+            bulges.push_back(data.vertlist[i]->bulge);
         }
+        if (std::any_of(bulges.begin(), bulges.end(), [](double bulge) { return std::fabs(bulge) > std::numeric_limits<double>::epsilon(); }))
+            polyline.bulges = std::move(bulges);
         polyline.closed = data.flags & 1;
+
         return polyline;
     }
 

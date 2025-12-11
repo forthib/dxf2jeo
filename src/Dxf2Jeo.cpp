@@ -141,8 +141,8 @@ namespace {
 
         auto jeoPolyline         = JeoPolyline{};
         jeoPolyline.pointIndexes = addPoints(jeoModel, dxfPolyline.coords);
-        if (dxfPolyline.closed)
-            jeoPolyline.pointIndexes.push_back(jeoPolyline.pointIndexes.front());
+        jeoPolyline.bulges       = dxfPolyline.bulges;
+        jeoPolyline.closed       = dxfPolyline.closed;
         setEntity(jeoModel, jeoPolyline, dxfPolyline);
         jeoModel.polylines.push_back(jeoPolyline);
     }

@@ -50,8 +50,10 @@ namespace {
     {
         auto data = convertEntity<DRW_LWPolyline>(polyline);
         data.vertlist.reserve(polyline.coords.size());
-        for (const auto& coord : polyline.coords) {
-            data.vertlist.push_back(std::make_shared<DRW_Vertex2D>(coord.x, coord.y, 0));
+        for (uint64_t i = 0, n = polyline.coords.size(); i < n; ++i) {
+            const auto&  coord = polyline.coords[i];
+            const double bulge = polyline.bulges ? polyline.bulges->at(i) : 0.;
+            data.vertlist.push_back(std::make_shared<DRW_Vertex2D>(coord.x, coord.y, bulge));
             data.elevation = coord.z;
         }
         if (polyline.closed)

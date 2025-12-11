@@ -10,67 +10,72 @@ namespace {
     template<typename T> struct Type{};
     // clang-format on
 
-    std::optional<std::uint64_t> toOptIndex(std::int64_t value)
+    auto fromJson(Type<JeoColor>, const jsoncons::ojson& json)
     {
-        if (value < 0)
-            return std::nullopt;
-        else
-            return static_cast<std::uint64_t>(value);
+        const auto colorArray = json.as<std::array<std::uint8_t, 3>>();
+        return JeoColor{colorArray[0], colorArray[1], colorArray[2]};
     }
 
-    auto fromArray(Type<JeoColor>, const std::array<std::uint8_t, 3>& colorArray) { return JeoColor{colorArray[0], colorArray[1], colorArray[2]}; }
-    auto fromArray(Type<JeoPoint>, const std::array<double, 3>& pointArray) { return JeoPoint{pointArray[0], pointArray[1], pointArray[2]}; }
-
-    auto fromArray(Type<JeoLine>, const std::array<std::int64_t, 4>& lineArray)
+    auto fromJson(Type<JeoPoint>, const jsoncons::ojson& json)
     {
-        auto line            = JeoLine{};
-        line.firstPointIndex = static_cast<std::uint64_t>(lineArray[0]);
-        line.lastPointIndex  = static_cast<std::uint64_t>(lineArray[1]);
-        line.colorIndex      = toOptIndex(lineArray[2]);
-        line.tagIndex        = toOptIndex(lineArray[3]);
+        const auto pointArray = json.as<std::array<double, 3>>();
+        return JeoPoint{pointArray[0], pointArray[1], pointArray[2]};
+    }
+
+    auto fromJson(Type<JeoEntity>, const jsoncons::ojson& json)
+    {
+        auto entity = JeoEntity{};
+        if (json.contains("color"))
+            entity.colorIndex = json["color"].as_uint();
+        if (json.contains("tag"))
+            entity.tagIndex = json["tag"].as_uint();
+        return entity;
+    }
+
+    auto fromJson(Type<JeoLine>, const jsoncons::ojson& json)
+    {
+        auto       line         = JeoLine{fromJson(Type<JeoEntity>{}, json)};
+        const auto pointIndexes = json["points"].as<std::array<std::uint64_t, 2>>();
+        line.firstPointIndex    = pointIndexes[0];
+        line.lastPointIndex     = pointIndexes[1];
         return line;
     }
 
-    auto fromArray(Type<JeoArc>, const std::array<std::int64_t, 6>& arcArray)
+    auto fromJson(Type<JeoArc>, const jsoncons::ojson& json)
     {
-        auto arc            = JeoArc{};
-        arc.centerIndex     = static_cast<std::uint64_t>(arcArray[0]);
-        arc.firstPointIndex = static_cast<std::uint64_t>(arcArray[1]);
-        arc.lastPointIndex  = static_cast<std::uint64_t>(arcArray[2]);
-        arc.direct          = arcArray[3] == 1;
-        arc.colorIndex      = toOptIndex(arcArray[4]);
-        arc.tagIndex        = toOptIndex(arcArray[5]);
+        auto       arc          = JeoArc{fromJson(Type<JeoEntity>{}, json)};
+        const auto pointIndexes = json["points"].as<std::array<std::uint64_t, 3>>();
+        arc.centerIndex         = pointIndexes[0];
+        arc.firstPointIndex     = pointIndexes[1];
+        arc.lastPointIndex      = pointIndexes[2];
+        arc.direct              = json["direct"].as_bool();
         return arc;
     }
 
-    auto fromVector(Type<JeoPolyline>, const std::vector<std::int64_t>& polylineArray)
+    auto fromJson(Type<JeoPolyline>, const jsoncons::ojson& json)
     {
-        if (polylineArray.size() < 2)
-            throw std::runtime_error{"invalid format for polyline (size < 2)"};
+        auto polyline         = JeoPolyline{fromJson(Type<JeoEntity>{}, json)};
+        polyline.pointIndexes = json["points"].as<std::vector<std::uint64_t>>();
+        if (json.contains("bulges"))
+            polyline.bulges = json["bulges"].as<std::vector<double>>();
+        polyline.closed = json["closed"].as_bool();
 
-        const auto nPoints = polylineArray.size() - 2;
+        if (polyline.bulges && polyline.bulges->size() != polyline.pointIndexes.size())
+            throw std::runtime_error{"size of points and bulges must be equal"};
 
-        auto polyline = JeoPolyline{};
-        polyline.pointIndexes.resize(nPoints);
-        for (std::uint64_t i = 0; i < nPoints; ++i)
-            polyline.pointIndexes[i] = static_cast<std::uint64_t>(polylineArray[i]);
-        polyline.colorIndex = toOptIndex(polylineArray[nPoints]);
-        polyline.tagIndex   = toOptIndex(polylineArray[nPoints + 1]);
         return polyline;
     }
 
-    template<typename T, typename ValueArray> auto fromArrays(const std::vector<ValueArray>& valueArrays)
+    template<typename T> auto fromJson(Type<std::vector<T>>, const jsoncons::ojson& json)
     {
-        auto values = std::vector<T>(valueArrays.size());
-        std::transform(valueArrays.begin(), valueArrays.end(), values.begin(), [&](const auto& valueArray) { return fromArray(Type<T>{}, valueArray); });
-        return values;
-    }
+        if (!json.is_array())
+            throw std::runtime_error{"json element must be an array"};
 
-    template<typename T, typename ValueVector> auto fromVectors(const std::vector<ValueVector>& valueVectors)
-    {
-        auto values = std::vector<T>(valueVectors.size());
-        std::transform(valueVectors.begin(), valueVectors.end(), values.begin(), [&](const auto& valueVector) { return fromVector(Type<T>{}, valueVector); });
-        return values;
+        auto elements = std::vector<T>{};
+        elements.reserve(json.size());
+        for (uint64_t i = 0, n = json.size(); i < n; ++i)
+            elements.push_back(fromJson(Type<T>{}, json[i]));
+        return elements;
     }
 }
 
@@ -84,16 +89,18 @@ JeoModel readJeo(const std::filesystem::path& filePath)
 
     const auto jeoVersionMajor = json["version"]["major"].as<std::uint64_t>();
     const auto jeoVersionMinor = json["version"]["minor"].as<std::uint64_t>();
-    if (jeoVersionMajor != 1 || jeoVersionMinor != 0)
+    if (jeoVersionMajor < 2)
+        throw std::runtime_error{"jeo file with version < 2 are no longer supported"};
+    if (jeoVersionMajor != 2 || jeoVersionMinor != 0)
         throw std::runtime_error{fmt::format("unsupported version number: {}.{}", jeoVersionMajor, jeoVersionMinor)};
 
     auto jeoModel      = JeoModel{};
-    jeoModel.colors    = fromArrays<JeoColor>(json["colors"].as<std::vector<std::array<std::uint8_t, 3>>>());
+    jeoModel.colors    = fromJson(Type<std::vector<JeoColor>>{}, json["colors"]);
     jeoModel.tags      = json["tags"].as<std::vector<std::string>>();
-    jeoModel.points    = fromArrays<JeoPoint>(json["points"].as<std::vector<std::array<double, 3>>>());
-    jeoModel.lines     = fromArrays<JeoLine>(json["lines"].as<std::vector<std::array<std::int64_t, 4>>>());
-    jeoModel.arcs      = fromArrays<JeoArc>(json["arcs"].as<std::vector<std::array<std::int64_t, 6>>>());
-    jeoModel.polylines = fromVectors<JeoPolyline>(json["polylines"].as<std::vector<std::vector<std::int64_t>>>());
+    jeoModel.points    = fromJson(Type<std::vector<JeoPoint>>{}, json["points"]);
+    jeoModel.lines     = fromJson(Type<std::vector<JeoLine>>{}, json["lines"]);
+    jeoModel.arcs      = fromJson(Type<std::vector<JeoArc>>{}, json["arcs"]);
+    jeoModel.polylines = fromJson(Type<std::vector<JeoPolyline>>{}, json["polylines"]);
 
     return jeoModel;
 }
