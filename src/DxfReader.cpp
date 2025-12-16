@@ -2,6 +2,7 @@
 
 #include "ArcUtils.h"
 #include "DxfModel.h"
+#include <algorithm>
 #include <cmath>
 #include <fmt/format.h>
 #include <libdxfrw/libdxfrw.h>

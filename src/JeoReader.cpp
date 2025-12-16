@@ -26,9 +26,9 @@ namespace {
     {
         auto entity = JeoEntity{};
         if (json.contains("color"))
-            entity.colorIndex = json["color"].as_uint();
+            entity.colorIndex = json["color"].as<uint64_t>();
         if (json.contains("tag"))
-            entity.tagIndex = json["tag"].as_uint();
+            entity.tagIndex = json["tag"].as<uint64_t>();
         return entity;
     }
 
